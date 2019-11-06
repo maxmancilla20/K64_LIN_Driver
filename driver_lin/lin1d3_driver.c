@@ -102,6 +102,7 @@ static void master_task(void *pvParameters)
 {
 	lin1d3_handle_t* handle = (lin1d3_handle_t*)pvParameters;
 	uint8_t  ID;
+	uint8_t  synch_break_byte = 0;
 	uint8_t  lin1p3_header[] = {0x55, 0x00};
 	uint8_t  lin1p3_message[size_of_uart_buffer];
 	uint8_t  message_size = 0;
@@ -164,12 +165,9 @@ static void master_task(void *pvParameters)
         		break;
         	}
         	message_size+=1;
-        	/* Send a Break */
-        	handle->uart_rtos_handle.base->C2 |= (1<<0);
-        	handle->uart_rtos_handle.base->C2 &= ~(1<<0);
-        	/* Read S1 to clear the TX flag and avoid unwanted interrupts */
-        	(void)handle->uart_rtos_handle.base->S1;
-        	vTaskDelay(2);
+        	/* Send a Break It is just sending one byte 0, *** CHANGE THIS WITH A REAL SYNCH BREAK ****/
+        	UART_RTOS_Send(&(handle->uart_rtos_handle), (uint8_t *)&synch_break_byte, 1);
+        	vTaskDelay(1);
         	/* Send the header */
         	UART_RTOS_Send(&(handle->uart_rtos_handle), (uint8_t *)lin1p3_header, size_of_lin_header_d);
         	/* Wait for the response */
@@ -192,6 +190,7 @@ static void slave_task(void *pvParameters)
 	uint8_t  message_size = 0;
 	size_t n;
 	uint8_t  msg_idx;
+	uint8_t synch_break_byte = 0;
 
 	if(handle == NULL) {
 		vTaskSuspend(NULL);
@@ -213,23 +212,17 @@ static void slave_task(void *pvParameters)
     {
         vTaskSuspend(NULL);
     }
-    /* Enable break detection */
-    //handle->uart_rtos_handle.base->S2 |= (1<<1);
 
     while(1) {
     	char dummy;
     	/* Init the message header buffer */
     	memset(lin1p3_header, 0, size_of_lin_header_d);
-    	/* Disable the Rx interrupt enable */
-    	handle->uart_rtos_handle.base->C2 &= ~(1<<5);
-    	/* Wait for a break flag*/
-    	while((handle->uart_rtos_handle.base->S1 & (1<<3)) == 0) vTaskDelay(1);
-    	/* Clear the break flag */
-    	//handle->uart_rtos_handle.base->S2 |= (1<<7);
-    	dummy = handle->uart_rtos_handle.base->S1;
-    	dummy = handle->uart_rtos_handle.base->D;
-    	/* Enable the Rx interrupt enable */
-    	handle->uart_rtos_handle.base->C2 |= (1<<5);
+    	/* Wait for a synch break This code is just waiting for one byte 0, *** CHANGE THIS WITH A REAL SYNCH BREAK ****/
+    	synch_break_byte = 0xFF;
+    	do {
+    		UART_RTOS_Receive(&(handle->uart_rtos_handle), &synch_break_byte, 1, &n);
+    	}while(synch_break_byte != 0);
+
     	/* Wait for header on the UART */
     	UART_RTOS_Receive(&(handle->uart_rtos_handle), lin1p3_header, size_of_lin_header_d, &n);
     	/* Check header */

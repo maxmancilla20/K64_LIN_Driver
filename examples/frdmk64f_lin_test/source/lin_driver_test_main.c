@@ -75,6 +75,7 @@ int main(void)
     /* Init board hardware. */
     BOARD_InitPins();
     BOARD_BootClockRUN();
+    BOARD_InitDebugConsole();
     NVIC_SetPriority(MASTER_UART_RX_TX_IRQn, 5);
     NVIC_SetPriority(SLAVE_UART_RX_TX_IRQn, 5);
 
