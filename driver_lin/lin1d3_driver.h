@@ -41,8 +41,9 @@ typedef void (*lin1d3_messageHandler_t)(void*);
  * Structure to link message IDs with message handlers
  * */
 typedef struct {
-	uint8_t ID;
-	lin1d3_messageHandler_t handler;
+	uint8_t ID; // ID of the message
+	uint8_t rx;  // set to 1 if you are just interested on the response
+	lin1d3_messageHandler_t handler; // Message handler function
 }lin1d3_messageConfig_t;
 
 /*
@@ -53,6 +54,8 @@ typedef struct {
 typedef struct {
 	lin1d3_nodeType_t type; /* type of LIN node */
 	UART_Type *uartBase;    /* UART base address */
+	uart_rtos_handle_t*	uart_rtos_handle;
+	uint8_t skip_uart_init;
 	uint32_t srcclk;		/* UART Clock */
 	uint32_t bitrate;		/* LIN bitrate to set */
 	lin1d3_messageConfig_t messageTable[lin1d3_max_supported_messages_per_node_cfg_d]; /* Table of supported IDs with its callbacks */
@@ -64,8 +67,9 @@ typedef struct {
  * */
 typedef struct {
 	lin1d3_nodeConfig_t	config;
-	uart_rtos_handle_t 	uart_rtos_handle;
-	struct _uart_handle uart_handle;
+	uart_rtos_handle_t*	uart_rtos_handle;
+	uint8_t skip_uart_init;
+	struct _uart_handle* uart_handle;
 	TaskHandle_t 		task_handle;
 	uart_rtos_config_t 	uart_config;
 	QueueHandle_t		node_queue;
