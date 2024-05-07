@@ -14,14 +14,21 @@
 #include "fsl_device_registers.h"
 #include "fsl_debug_console.h"
 #include "board.h"
+#include "fsl_port.h"
+#include "fsl_gpio.h"
+#include "fsl_common.h"
 
 #include "fsl_uart_freertos.h"
 #include "fsl_uart.h"
+#include "fsl_port.h"
 
 #include "pin_mux.h"
 #include "clock_config.h"
 #include <lin1d3_driver.h>
+#include <SwitchesLedsInit.h>
 #include "FreeRTOSConfig.h"
+
+#include "SwitchesLedsInit.h"
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -56,6 +63,14 @@
 #define app_message_id_5_d (0x05<<2|message_size_4_bytes_d)
 #define app_message_id_6_d (0x06<<2|message_size_8_bytes_d)
 
+/* GPIO pin configuration. */
+#define BOARD_LED_GPIO       BOARD_LED_RED_GPIO
+#define BOARD_LED_GPIO_PIN   BOARD_LED_RED_GPIO_PIN
+#define BOARD_SW_GPIO        BOARD_SW3_GPIO
+#define BOARD_SW_GPIO_PIN    BOARD_SW3_GPIO_PIN
+#define BOARD_SW_PORT        BOARD_SW3_PORT
+#define BOARD_SW_IRQ         BOARD_SW3_IRQ
+#define BOARD_SW_IRQ_HANDLER BOARD_SW3_IRQ_HANDLER
 
 
 /*******************************************************************************
@@ -71,16 +86,41 @@ static void	message_1_callback_local_slave(void* message);
 static void	message_1_callback_slave(void* message);
 static void	message_2_callback_slave(void* message);
 static void	message_3_callback_slave(void* message);
+
+void IDSimulation(void);
+void BOARD_SW2_IRQ_HANDLER(void);
+void BOARD_SW3_IRQ_HANDLER(void);
 /*******************************************************************************
  * Variables
  ******************************************************************************/
+volatile bool button1_pressed;
+volatile bool button2_pressed;
 
 /*******************************************************************************
  * Code
  ******************************************************************************/
-/*!
- * @brief Application entry point.
- */
+void BOARD_SW2_IRQ_HANDLER(void)
+{
+    /* Clear external interrupt flag. */
+    GPIO_PortClearInterruptFlags(BOARD_SW2_GPIO, 1U << BOARD_SW2_GPIO_PIN);
+
+#if defined __CORTEX_M && (__CORTEX_M == 4U)
+    __DSB();
+#endif
+	button1_pressed = 1;
+}
+
+void BOARD_SW3_IRQ_HANDLER(void)
+{
+    /* Clear external interrupt flag. */
+    GPIO_PortClearInterruptFlags(BOARD_SW3_GPIO, 1U << BOARD_SW3_GPIO_PIN);
+
+#if defined __CORTEX_M && (__CORTEX_M == 4U)
+    __DSB();
+#endif
+	button2_pressed = 1;
+}
+
 int main(void)
 {
     /* Init board hardware. */
@@ -89,7 +129,7 @@ int main(void)
     BOARD_InitDebugConsole();
     NVIC_SetPriority(MASTER_UART_RX_TX_IRQn, 5);
     NVIC_SetPriority(SLAVE_UART_RX_TX_IRQn, 5);
-
+	InitSwLed();
 
     if (xTaskCreate(test_task, "test_task", test_task_heap_size_d, NULL, init_task_PRIORITY, NULL) != pdPASS)
     {
@@ -193,6 +233,7 @@ static void test_task(void *pvParameters)
     	lin1d3_masterSendMessage(master_handle, app_message_id_5_d);
     	vTaskDelay(200);
     	lin1d3_masterSendMessage(master_handle, app_message_id_6_d);
+		IDSimulation();
     }
 
     vTaskSuspend(NULL);
@@ -269,3 +310,13 @@ static void	message_3_callback_slave(void* message)
 	message_data[7] = 86;
 }
 
+void IDSimulation()
+{
+	if(button1_pressed == 1)
+	{
+		//message_data[0] = 0x00;		//0b00
+		PRINTF("LED BLUE \r\n");
+		GPIO_PortClear(BOARD_LED_BLUE_GPIO, 1u << BOARD_LED_BLUE_GPIO_PIN);
+		button1_pressed = 0;
+	}
+}
