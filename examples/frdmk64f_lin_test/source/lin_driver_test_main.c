@@ -242,7 +242,7 @@ static void	message_1_callback_slave(void* message)
 {
 	/*SLAVE C SHORT APPLICATION*/
 	uint8_t* MessageData = (uint8_t*)message;
-	PRINTF("Slave B\r\n");
+	PRINTF("Slave C requested \r\n");
 
 	if(button1_pressed == 1 && button2_pressed == 1 ){
 		button1_pressed = 0;
@@ -267,6 +267,8 @@ static void	message_1_callback_slave(void* message)
 		GPIO_PortClear(BOARD_LED_RED_GPIO, 1u << BOARD_LED_RED_GPIO_PIN);
 		GPIO_PortClear(BOARD_LED_BLUE_GPIO, 1u << BOARD_LED_BLUE_GPIO_PIN);
 		GPIO_PortSet(BOARD_LED_GREEN_GPIO, 1u << BOARD_LED_GREEN_GPIO_PIN);
+
+		xQueueSendFromISR(slave_handle, 0xFF, 0);/*Send something*/
 	}
 	else if(button1_pressed == 0 && button2_pressed == 0 ){
 		button1_pressed = 0;
