@@ -1,0 +1,7 @@
+ExitOnError 1
+r
+h
+loadfile "C:\Users\USER\Documents\MCUXpressoIDE_11.8.0_1165\workspace\LIN_04\examples\frdmk64f_lin_test\Debug\frdmk64f_lin_test.hex"
+qc
+
+qc
