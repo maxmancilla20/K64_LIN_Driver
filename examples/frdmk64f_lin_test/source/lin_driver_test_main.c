@@ -74,20 +74,13 @@
 #define BOARD_SW_IRQ         BOARD_SW3_IRQ
 #define BOARD_SW_IRQ_HANDLER BOARD_SW3_IRQ_HANDLER
 
+#define size_of_lin_header_d (2)
+
 
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
 static void test_task(void *pvParameters);
-
-/*static void	message_4_callback_local_slave(void* message);
-static void	message_5_callback_local_slave(void* message);
-static void	message_6_callback_local_slave(void* message);
-static void	message_1_callback_local_slave(void* message);
-
-static void	message_1_callback_slave(void* message);
-static void	message_2_callback_slave(void* message);
-static void	message_3_callback_slave(void* message);*/
 
 #if defined(SLAVE_C)
 static void	message_1_callback_slave(void* message);
@@ -240,6 +233,8 @@ static void test_task(void *pvParameters)
 #if defined(SLAVE_C)
 static void	message_1_callback_slave(void* message)
 {
+	uint8_t  lin1p3_header[] = {0xFF, 0xFF};
+	uint8_t  synch_break_byte = 0;
 	/*SLAVE C SHORT APPLICATION*/
 	uint8_t* MessageData = (uint8_t*)message;
 	PRINTF("Slave C requested \r\n");
@@ -268,7 +263,11 @@ static void	message_1_callback_slave(void* message)
 		GPIO_PortClear(BOARD_LED_BLUE_GPIO, 1u << BOARD_LED_BLUE_GPIO_PIN);
 		GPIO_PortSet(BOARD_LED_GREEN_GPIO, 1u << BOARD_LED_GREEN_GPIO_PIN);
 
-		xQueueSendFromISR(slave_handle, 0xFF, 0);/*Send something*/
+		UART_RTOS_Send(slave_handle->uart_rtos_handle, (uint8_t *)&synch_break_byte, 1);
+		//vTaskDelay(1);
+		/* Send the header */
+		UART_RTOS_Send(slave_handle->uart_rtos_handle, (uint8_t *)lin1p3_header, size_of_lin_header_d);
+		//vTaskDelay(1);
 	}
 	else if(button1_pressed == 0 && button2_pressed == 0 ){
 		button1_pressed = 0;
