@@ -81,6 +81,7 @@
  * Prototypes
  ******************************************************************************/
 static void test_task(void *pvParameters);
+static void Blink(void *pvParameters);
 
 #if defined(SLAVE_C)
 static void	message_1_callback_slave(void* message);
@@ -103,6 +104,8 @@ lin1d3_nodeConfig_t node_config;
 #if defined(SLAVE_C)
 	lin1d3_handle_t* slave_handle;
 #endif
+
+TaskHandle_t * const BlinkHandler;
 
 /*******************************************************************************
  * Code
@@ -152,6 +155,7 @@ int main(void)
         while (1)
             ;
     }
+
     PRINTF(" *** LIN driver demo ***\r\n");
     vTaskStartScheduler();
     for (;;)
@@ -226,6 +230,14 @@ static void test_task(void *pvParameters)
 	#endif
     	vTaskDelay(100);
     }
+		if (xTaskCreate(Blink, "Blink_task", test_task_heap_size_d, NULL, 5, BlinkHandler) != pdPASS)
+    {
+        PRINTF("Init Task creation failed!.\r\n");
+        while (1)
+            ;
+    }
+
+	//vTaskSuspend(BlinkHandler);
 
     vTaskSuspend(NULL);
 }
@@ -238,6 +250,7 @@ static void	message_1_callback_slave(void* message)
 	/*SLAVE C SHORT APPLICATION*/
 	uint8_t* MessageData = (uint8_t*)message;
 	PRINTF("Slave C requested \r\n");
+	
 
 	if(button1_pressed == 1 && button2_pressed == 1 ){
 		button1_pressed = 0;
@@ -256,11 +269,27 @@ static void	message_1_callback_slave(void* message)
 		GPIO_PortSet(BOARD_LED_GREEN_GPIO, 1u << BOARD_LED_GREEN_GPIO_PIN);
 	}
 	else if(button1_pressed == 0 && button2_pressed == 1 ){
+		static uint8_t InternalFlag = 0;
+
+		if(InternalFlag == 0)
+		{
+			//vTaskSuspend(BlinkHandler);
+			GPIO_PortSet(BOARD_LED_RED_GPIO, 1u << BOARD_LED_RED_GPIO_PIN);
+			GPIO_PortSet(BOARD_LED_BLUE_GPIO, 1u << BOARD_LED_BLUE_GPIO_PIN);
+			InternalFlag = 1;
+		}
+		else
+		{
+			//vTaskResume(BlinkHandler);
+			GPIO_PortSet(BOARD_LED_RED_GPIO, 1u << BOARD_LED_RED_GPIO_PIN);
+			GPIO_PortSet(BOARD_LED_BLUE_GPIO, 1u << BOARD_LED_BLUE_GPIO_PIN);
+			InternalFlag = 0;
+		}
+		GPIO_PortClear(BOARD_LED_RED_GPIO, 1u << BOARD_LED_RED_GPIO_PIN);
+		GPIO_PortClear(BOARD_LED_BLUE_GPIO, 1u << BOARD_LED_BLUE_GPIO_PIN);
 		PRINTF("LED PURPLE \r\n");
 		button1_pressed = 0;
 		button2_pressed = 0;
-		GPIO_PortClear(BOARD_LED_RED_GPIO, 1u << BOARD_LED_RED_GPIO_PIN);
-		GPIO_PortClear(BOARD_LED_BLUE_GPIO, 1u << BOARD_LED_BLUE_GPIO_PIN);
 		GPIO_PortSet(BOARD_LED_GREEN_GPIO, 1u << BOARD_LED_GREEN_GPIO_PIN);
 
 		UART_RTOS_Send(slave_handle->uart_rtos_handle, (uint8_t *)&synch_break_byte, 1);
@@ -282,4 +311,18 @@ static void	message_1_callback_slave(void* message)
 	}
 	PRINTF("RECEIVED MESSAGE FROM MASTER %d,%d\r\n", MessageData[0], MessageData[1]);
 }
+
+static void Blink(void* message)
+{
+	while(1)
+	{
+		GPIO_PortToggle(BOARD_LED_RED_GPIO, 1u << BOARD_LED_RED_GPIO_PIN);
+		GPIO_PortToggle(BOARD_LED_BLUE_GPIO, 1u << BOARD_LED_BLUE_GPIO_PIN);
+
+		vTaskDelay(100);
+	}
+	
+}
 #endif
+
+

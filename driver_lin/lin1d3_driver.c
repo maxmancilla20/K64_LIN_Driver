@@ -255,6 +255,6 @@ static void slave_task(void *pvParameters)
         	handle->config.messageTable[msg_idx].handler((void*)lin1p3_message);
     	}
 
-		UART_RTOS_Send(handle->uart_rtos_handle, 0xFF, 1);
+		//UART_RTOS_Send(handle->uart_rtos_handle, 0xFF, 1);
     }
 }
